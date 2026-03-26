@@ -14,6 +14,7 @@ Analytics-APP is a Node.js (Express) API that exposes multiple Google Analytics 
     - [Staging](#staging)
 - [Staging Logs](#staging-logs)
 - [PM2 (2 separate processes)](#pm2-2-separate-processes)
+- [Auto restart on push (GitHub Actions + AWS SSM)](#auto-restart-on-push-github-actions--aws-ssm)
 - [Available Routes](#available-routes)
 - [Project Structure](#project-structure)
 - [Code Formatting (4-space indentation)](#code-formatting-4-space-indentation)
@@ -173,6 +174,40 @@ pm2 logs analytics-production
 ```
 
 Note: for the staging log file (`STAGING_LOG_FILE_PATH`), use a path accessible by the PM2 user.
+
+## Auto restart on push (GitHub Actions + AWS SSM)
+
+This repository includes a workflow at `.github/workflows/restart-pm2-on-push.yml` that runs automatically on:
+
+- push to `main`
+- push to `staging`
+
+Behavior:
+
+- `main` push: updates code on the AWS EC2 instance and restarts the PM2 production process
+- `staging` push: updates code on the AWS EC2 instance and restarts the PM2 staging process
+
+The workflow uses **AWS Systems Manager (SSM)** (`AWS-RunShellScript`) to execute remote commands, so SSH access is not required.
+
+### Required GitHub secrets
+
+Set these in **GitHub → Settings → Secrets and variables → Actions**:
+
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
+- `AWS_APP_DIR` (for example `/var/www/analytics-app`)
+- `AWS_MAIN_INSTANCE_ID`
+- `AWS_STAGING_INSTANCE_ID`
+- `PM2_MAIN_PROCESS_NAME` (for example `analytics-production`)
+- `PM2_STAGING_PROCESS_NAME` (for example `analytics-staging`)
+
+### EC2 prerequisites
+
+- EC2 instance has SSM Agent installed and online in Systems Manager
+- EC2 IAM role allows SSM commands (for example `AmazonSSMManagedInstanceCore`)
+- PM2 is installed on the instance and process names match the secret values
+- Application folder on EC2 is a git clone of this repository (`AWS_APP_DIR`)
 
 ## Staging Logs
 
